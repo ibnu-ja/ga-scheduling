@@ -2,7 +2,7 @@ import numpy as np
 import random
 from database import get_beban_mengajar, get_mapel_guru_mapping, get_special_ids, save_best_chromosome
 from population import generate_population, WAKTU_IDS, HARI_IDS
-from fitness import calculate_fitness
+from fitness import calculate_fitness, MAPEL_IDX, GURU_IDX, KELAS_IDX, WAKTU_IDX, HARI_IDX
 
 def format_fitness_scientific(value):
     if value == 0:
@@ -38,7 +38,7 @@ def mutate(chromosome, mutation_rate=0.05):
     if np.any(mask):
         # We should NOT mutate fixed mapels (Upacara, Bersih, Istirahat)
         # to preserve their fixed slots and avoid high penalties.
-        fixed_mapels_mask = np.isin(chromosome[:, 0], [1, 2, 3])
+        fixed_mapels_mask = np.isin(chromosome[:, MAPEL_IDX], [1, 2, 3])
         # Only mutate genes that are NOT special mapels
         actual_mutation_mask = mask & ~fixed_mapels_mask
     
@@ -88,8 +88,8 @@ def mutate(chromosome, mutation_rate=0.05):
                                 new_waktu[i] = w
                                 break
         
-            chromosome[actual_mutation_mask, 3] = new_waktu
-            chromosome[actual_mutation_mask, 4] = new_hari
+            chromosome[actual_mutation_mask, WAKTU_IDX] = new_waktu
+            chromosome[actual_mutation_mask, HARI_IDX] = new_hari
     return chromosome
 
 def run_ga(pop_size=100, generations=1000):
