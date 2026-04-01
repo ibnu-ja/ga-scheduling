@@ -169,6 +169,27 @@ Semakin kecil $p_{\text{total}}$, semakin mendekati 1 nilai fitness-nya. Kromoso
 
 Tersedia di `db/main/*.sql`
 
+### mendapatkan hasil
+
+```sql
+SELECT 
+    h.nama AS Hari,
+    w.jam_mulai || ' - ' || w.jam_selesai AS Waktu,
+    k.nama AS Kelas,
+    m.kode AS Mata_Pelajaran,
+    COALESCE(g.nama, '-') AS Guru
+FROM chromosome_gene cg
+JOIN chromosome c ON cg.chromosome_id = c.id
+JOIN hari h ON cg.hari_id = h.id
+JOIN waktu w ON cg.waktu_id = w.id
+JOIN kelas k ON cg.kelas_id = k.id
+JOIN mapel m ON cg.mapel_id = m.id
+LEFT JOIN guru g ON cg.guru_id = g.id
+WHERE c.status = 'aktif'
+ORDER BY h.id, w.id, k.nama; -- PERUBAHAN DI SINI
+
+```
+
 ---
 
 ## Kardinalitas Relasi

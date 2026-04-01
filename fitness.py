@@ -47,12 +47,65 @@ def calculate_fitness(chromosome, special_ids=None):
     pns_p3k_ids = special_ids['pns_p3k'] if special_ids else set()
 
     # HC-3: Kelas Conflict (Exclude Co-Teaching)
-    mask_non_coteaching = ~np.isin(chromosome[:, MAPEL_IDX], list(co_teaching_ids))
-    non_ct_genes = chromosome[mask_non_coteaching]
-    if len(non_ct_genes) > 0:
-        _, counts = np.unique(non_ct_genes[:, [KELAS_IDX, WAKTU_IDX, HARI_IDX]], axis=0, return_counts=True)
-        hc3_v = np.sum(counts - 1) 
-        p_total += hc3_v * W_HARD
+    # v3 = |{(k,t,h) | exist ci, cj, i!=j, ki=kj, ti=tj, hi=hj AND (mi not in Mco OR mj not in Mco)}|
+    # Logic: Only allow overlap if ALL mapels in that (k,t,h) slot are co-teaching.
+    # If there is at least one non-co-teaching mapel, it cannot overlap with anything.
+    # If there are multiple co-teaching mapels, they can overlap.
+    
+    # We can group by (k,t,h) and check if any group has:
+    # 1. More than one unique mapel, where at least one is NOT co-teaching.
+    # 2. Same mapel twice, where that mapel is NOT co-teaching.
+    
+    # Simplified approach:
+    # A violation occurs if in a (k,t,h) slot:
+    # - There is more than one gene AND (at least one gene is NOT co-teaching)
+    
+    # Let's use unique to find all (k,t,h) combinations
+    kth_combos, kth_inverse, kth_counts = np.unique(chromosome[:, [KELAS_IDX, WAKTU_IDX, HARI_IDX]], axis=0, return_inverse=True, return_counts=True)
+    
+    hc3_v = 0
+    # Slots with more than one gene
+    multi_gene_slots = np.where(kth_counts > 1)[0]
+    
+    for slot_idx in multi_gene_slots:
+        # Get all genes in this slot
+        slot_genes_mask = kth_inverse == slot_idx
+        slot_mapels = chromosome[slot_genes_mask, MAPEL_IDX]
+        
+        # Check if any mapel in this slot is NOT co-teaching
+        has_non_co = any(m not in co_teaching_ids for m in slot_mapels)
+        
+        if has_non_co:
+            # If there is a non-co-teaching mapel, then any extra gene is a violation
+            hc3_v += len(slot_mapels) - 1
+        else:
+            # All are co-teaching. 
+            # According to HC-2: "several genes with different teachers are allowed to have the same (m, k, t, h) combination".
+            # If they are DIFFERENT co-teaching mapels, is it allowed? 
+            # The guideline says (m, k, t, h) must be same. 
+            # "kombinasi (m, k, t, h) yang sama".
+            # So if mapel_id is different but both are co-teaching, it might still be a violation?
+            # Let's check: "jika mata pelajaran m termasuk dalam Mco ... maka beberapa gen dengan guru g yang berbeda diperbolehkan memiliki kombinasi (m, k, t, h) yang sama."
+            # This implies same m.
+            
+            # Let's count violations if mapels are different even if all are co-teaching
+            unique_slot_mapels, mapel_counts = np.unique(slot_mapels, return_counts=True)
+            if len(unique_slot_mapels) > 1:
+                # Different mapels in same slot (even if all are co-teaching)
+                # This is a bit ambiguous, but usually co-teaching means same subject, different teachers (e.g. split class).
+                # If they are different subjects (e.g. Religion and Sport), they shouldn't overlap unless it's a specific arrangement.
+                # However, the user's issue shows DASAR PPLG 1 and PABP overlapping. 
+                # PABP is co-teaching, DASAR PPLG 1 (likely) is not.
+                # If both were co-teaching but different, should they overlap? 
+                # HC-2 says same (m, k, t, h).
+                
+                # Penalty for different mapels in same slot:
+                hc3_v += len(slot_mapels) - 1 # Simple: any overlap of different mapels is violation
+            else:
+                # Same mapel, multiple genes. This is OK for co-teaching.
+                pass
+    
+    p_total += hc3_v * W_HARD
 
     # HC-4: Guru Conflict (Exclude g = -1)
     mask_with_guru = chromosome[:, GURU_IDX] != -1

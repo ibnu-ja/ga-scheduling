@@ -45,7 +45,10 @@ def mutate(chromosome, mutation_rate=0.05):
         if np.any(actual_mutation_mask):
             num_to_mutate = np.sum(actual_mutation_mask)
         
-            # Simple strategy: keep trying until we get non-fixed slots for these regular subjects
+            # New strategy: Try to find a slot that is not already occupied in this class
+            # or at least not a fixed slot.
+            
+            # Simple approach: Pick random slots first
             new_waktu = np.random.choice(WAKTU_IDS, size=num_to_mutate)
             new_hari = np.random.choice(HARI_IDS, size=num_to_mutate)
         
@@ -61,6 +64,29 @@ def mutate(chromosome, mutation_rate=0.05):
             if np.any(is_fixed):
                 safe_slots = [2, 3, 4, 6, 7, 9, 10, 11]
                 new_waktu[is_fixed] = np.random.choice(safe_slots, size=np.sum(is_fixed))
+            
+            # Smart mutation: try to avoid existing slots in the SAME class
+            # We'll do it one by one for the mutation candidates for simplicity
+            indices_to_mutate = np.where(actual_mutation_mask)[0]
+            for i, idx in enumerate(indices_to_mutate):
+                kelas_id = chromosome[idx, KELAS_IDX]
+                # Other genes in the same class
+                class_mask = (chromosome[:, KELAS_IDX] == kelas_id)
+                class_mask[idx] = False # Don't compare with itself
+                occupied_slots = set(zip(chromosome[class_mask, HARI_IDX], chromosome[class_mask, WAKTU_IDX]))
+                
+                # Check if proposed slot is occupied
+                if (new_hari[i], new_waktu[i]) in occupied_slots:
+                    # Try to find an empty slot (Max 10 attempts)
+                    for _ in range(10):
+                        h = random.choice(HARI_IDS)
+                        w = random.choice(WAKTU_IDS)
+                        # Avoid fixed slots
+                        if not ((h == 1 and w == 1) or (h == 4 and w == 1) or (w == 5) or (w == 8)):
+                            if (h, w) not in occupied_slots:
+                                new_hari[i] = h
+                                new_waktu[i] = w
+                                break
         
             chromosome[actual_mutation_mask, 3] = new_waktu
             chromosome[actual_mutation_mask, 4] = new_hari
@@ -112,5 +138,5 @@ def run_ga(pop_size=100, generations=1000):
     return best_overall_chromosome, best_overall_fitness
 
 if __name__ == "__main__":
-    best_schedule, score = run_ga(pop_size=100, generations=1000)
+    best_schedule, score = run_ga(pop_size=200, generations=2000)
     print(f"Final Best Fitness: {format_fitness_scientific(score)}")

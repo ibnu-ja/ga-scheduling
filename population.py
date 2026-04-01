@@ -54,7 +54,16 @@ def generate_chromosome(beban_data, guru_mapping, special_ids):
         for _ in range(jumlah_waktu):
             id_guru = random.choice(daftar_guru_tersedia)
             
+            # Smart initialization: avoid already occupied slots in the same class
+            # to reduce initial conflicts
+            # Get current slots occupied by this class
+            occupied_slots = set()
+            for g in genes:
+                if g[2] == id_kelas:
+                    occupied_slots.add((g[4], g[3])) # (hari, waktu)
+
             # Avoid fixed slots during initialization
+            attempts = 0
             while True:
                 id_hari = random.choice(HARI_IDS)
                 id_waktu = random.choice(WAKTU_IDS)
@@ -65,11 +74,18 @@ def generate_chromosome(beban_data, guru_mapping, special_ids):
                     (id_waktu == 5) or
                     (id_waktu == 8)
                 )
+                
+                # Check if slot is occupied in this class
+                is_occupied = (id_hari, id_waktu) in occupied_slots
+                
                 if not is_fixed_slot:
-                    break
+                    if not is_occupied or attempts > 20:
+                        break
+                attempts += 1
 
             gen = [id_mapel, id_guru, id_kelas, id_waktu, id_hari]
             genes.append(gen)
+            occupied_slots.add((id_hari, id_waktu))
 
     return np.array(genes, dtype=int)
 
