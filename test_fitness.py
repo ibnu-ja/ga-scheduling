@@ -34,14 +34,18 @@ def test_hc1_violations():
         [bersih_id, -1, 1, 1, 4],  # Kamis jam 1
         [istirahat_id, -1, 1, 5, 2], # Selasa jam 5
         [istirahat_id, -1, 1, 8, 3], # Rabu jam 8
+        [-1, -1, 1, 7, 5],           # Jumat jam 7 (empty)
+        [-1, -1, 1, 8, 5],           # Jumat jam 8 (empty)
     ], dtype=int)
     
-    # Wrong genes (4 violations)
+    # Wrong genes (6 violations)
     wrong_genes = np.array([
         [999, -1, 1, 1, 1], # Senin jam 1, not Upacara
         [bersih_id, 10, 1, 1, 4], # Kamis jam 1, has guru
         [999, -1, 1, 5, 2], # Selasa jam 5, not Istirahat
         [istirahat_id, 11, 1, 8, 3], # Rabu jam 8, has guru
+        [istirahat_id, -1, 1, 8, 5], # Jumat jam 8, NO Istirahat allowed here now
+        [999, -1, 1, 7, 5], # Jumat jam 7, must be empty
     ], dtype=int)
     
     # Bypass other constraints for pure HC-1 test

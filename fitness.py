@@ -50,10 +50,21 @@ def calculate_fitness(chromosome, special_ids=None):
     if np.any(mask_kamis_1):
         hc1_v += np.sum((chromosome[mask_kamis_1, MAPEL_IDX] != bersih_id) | (chromosome[mask_kamis_1, GURU_IDX] != -1))
     
-    # Jam 5 & 8 Every Day: Istirahat
-    mask_istirahat = (chromosome[:, WAKTU_IDX] == 5) | (chromosome[:, WAKTU_IDX] == 8)
-    if np.any(mask_istirahat):
-        hc1_v += np.sum((chromosome[mask_istirahat, MAPEL_IDX] != istirahat_id) | (chromosome[mask_istirahat, GURU_IDX] != -1))
+    # Jam 5 Every Day: Istirahat
+    mask_istirahat_5 = (chromosome[:, WAKTU_IDX] == 5)
+    if np.any(mask_istirahat_5):
+        hc1_v += np.sum((chromosome[mask_istirahat_5, MAPEL_IDX] != istirahat_id) | (chromosome[mask_istirahat_5, GURU_IDX] != -1))
+    
+    # Jam 8 Monday-Thursday: Istirahat
+    mask_istirahat_8 = (chromosome[:, WAKTU_IDX] == 8) & (chromosome[:, HARI_IDX] != 5)
+    if np.any(mask_istirahat_8):
+        hc1_v += np.sum((chromosome[mask_istirahat_8, MAPEL_IDX] != istirahat_id) | (chromosome[mask_istirahat_8, GURU_IDX] != -1))
+    
+    # Friday Jam 7-11: Empty (m=-1, g=-1)
+    mask_jumat_pulang = (chromosome[:, HARI_IDX] == 5) & (chromosome[:, WAKTU_IDX] >= 7)
+    if np.any(mask_jumat_pulang):
+        # Violation if ANY mapel or guru is NOT -1
+        hc1_v += np.sum((chromosome[mask_jumat_pulang, MAPEL_IDX] != -1) | (chromosome[mask_jumat_pulang, GURU_IDX] != -1))
     
     p_total += hc1_v * W_HARD
 

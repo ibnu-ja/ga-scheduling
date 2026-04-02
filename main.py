@@ -60,13 +60,16 @@ def mutate(chromosome, special_ids, mutation_rate=0.05):
                 ((new_hari == 1) & (new_waktu == 1)) |
                 ((new_hari == 4) & (new_waktu == 1)) |
                 (new_waktu == 5) |
-                (new_waktu == 8)
+                ((new_waktu == 8) & (new_hari != 5)) |
+                ((new_hari == 5) & (new_waktu >= 7))
             )
         
-            # For those that hit a fixed slot, re-roll to a safe slot
+            # For those that hit a fixed slot, re-roll to a safe slot (simple fix)
             if np.any(is_fixed):
-                safe_slots = [2, 3, 4, 6, 7, 9, 10, 11]
-                new_waktu[is_fixed] = np.random.choice(safe_slots, size=np.sum(is_fixed))
+                # We'll just pick slots that are generally safe across most days
+                # and let the smart loop below refine them if they are still invalid for Friday
+                generally_safe_waktu = [2, 3, 4, 6] 
+                new_waktu[is_fixed] = np.random.choice(generally_safe_waktu, size=np.sum(is_fixed))
             
             # Smart mutation: try to avoid existing slots in the SAME class
             # We'll do it one by one for the mutation candidates for simplicity
@@ -85,7 +88,14 @@ def mutate(chromosome, special_ids, mutation_rate=0.05):
                         h = random.choice(HARI_IDS)
                         w = random.choice(WAKTU_IDS)
                         # Avoid fixed slots
-                        if not ((h == 1 and w == 1) or (h == 4 and w == 1) or (w == 5) or (w == 8)):
+                        is_fixed_manual = (
+                            (h == 1 and w == 1) or
+                            (h == 4 and w == 1) or
+                            (w == 5) or
+                            (w == 8 and h != 5) or
+                            (h == 5 and w >= 7)
+                        )
+                        if not is_fixed_manual:
                             if (h, w) not in occupied_slots:
                                 new_hari[i] = h
                                 new_waktu[i] = w
