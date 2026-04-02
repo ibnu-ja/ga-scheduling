@@ -1,7 +1,3 @@
-# GA SCHEDULING
-
-this project is vibe coded using perplexity and junie
-
 ## Model Matematika
 
 Himpunan: 
@@ -117,7 +113,19 @@ $$+\ \sum_{m \in M}\sum_{k \in K}\sum_{h \in H} \max\!\left(0,\ \bigl|\{ c \in C
 
 ---
 
-### 2. Penyebaran Jam Mengajar Guru
+### 2. Kendala Kontiguitas Harian (Blok Pertemuan Mapel)
+
+Mata pelajaran yang sama jika dijadwalkan pada hari yang sama di satu kelas sebaiknya berada dalam satu blok waktu yang berurutan (kontigu/tandem). Mata pelajaran tersebut tidak boleh terpecah menjadi beberapa segmen yang disela oleh mata pelajaran lain pada hari itu. Slot Istirahat tidak dianggap sebagai penyela. Kendala ini tidak berlaku untuk kegiatan khusus (Upacara, Bersih-bersih, Istirahat).
+
+Violation dihitung berdasarkan jumlah segmen terpisah (blok) per mata pelajaran per hari yang melebihi batas wajar. Idealnya, sebuah mata pelajaran reguler yang diajarkan pada suatu hari tidak terputus oleh mata pelajaran lain, sehingga hanya membentuk tepat 1 blok. Pengurangan dengan angka 1 pada formula berfungsi sebagai batas toleransi kemunculan tersebut. Jika mata pelajaran terpecah menjadi dua blok yang terpisah, maka blok tambahan tersebut dihitung sebagai satu pelanggaran. Fungsi maksimum memastikan bahwa jika mata pelajaran tidak diajarkan sama sekali pada hari tersebut, nilai pelanggaran tetap nol tanpa menghasilkan penalti negatif.
+
+Biarkan $E(m,k,h)$ menjadi jumlah blok waktu kontigu (segmen terpisah) untuk mata pelajaran $m$ di kelas $k$ pada hari $h$, dengan mengabaikan slot Istirahat di antara slot mata pelajaran yang sama.
+
+$$v_{\text{sc3}} = \sum_{m \notin \{\text{Upacara, Bersih-bersih, Istirahat}\}} \sum_{k \in K} \sum_{h \in H} \max\!\left(0,\ E(m,k,h) - 1\right)$$
+
+---
+
+### 3. Penyebaran Jam Mengajar Guru
 #### a. Batas Jam Mengajar Harian Guru
 
 Guru sebaiknya tidak mengajar terlalu banyak dalam satu hari meskipun secara total mingguan masih dalam batas wajar. Struktur slot sudah menjamin maksimal 4 slot berturut-turut secara alami karena Istirahat di jam ke-5 dan ke-8, sehingga tidak perlu constraint tambahan untuk slot berturut-turut.
@@ -144,7 +152,6 @@ Guru $g \in G_{\text{pns}}$ sebaiknya memiliki total slot mengajar minimal 24 da
 $$v_{\text{sc2b}} = \sum_{g \in G_{\text{pns}}} \max\!\left(0,\ 24 - \bigl|\{ c \in C \mid c.g = g \}\bigr|\right)$$
 
 ---
-
 
 ## 3.4 Fungsi Penalti
 
@@ -186,25 +193,5 @@ JOIN kelas k ON cg.kelas_id = k.id
 JOIN mapel m ON cg.mapel_id = m.id
 LEFT JOIN guru g ON cg.guru_id = g.id
 WHERE c.status = 'aktif'
-ORDER BY h.id, w.id, k.nama; -- PERUBAHAN DI SINI
-
+ORDER BY h.id, w.id, k.nama;
 ```
-
----
-
-## Kardinalitas Relasi
-
-| Relasi | Kardinalitas | Keterangan |
-|---|---|---|
-| `mapel` → `beban_mengajar` | 1 : N | Satu mapel punya beban di banyak kelas |
-| `kelas` → `beban_mengajar` | 1 : N | Satu kelas punya beban banyak mapel |
-| `mapel` + `kelas` → `beban_mengajar` | M : N via `beban_mengajar` | UNIQUE memaksa tepat satu nilai $B$ per pasangan |
-| `chromosome` → `chromosome_gene` | 1 : N | Satu kromosom terdiri dari banyak gen |
-| `mapel` → `chromosome_gene` | 1 : N | Satu mapel bisa muncul di banyak gen |
-| `guru` → `chromosome_gene` | 1 : N nullable | Satu guru bisa mengajar di banyak gen; NULL untuk aktivitas tanpa guru |
-| `kelas` → `chromosome_gene` | 1 : N | Satu kelas memiliki banyak gen dalam satu kromosom |
-| `waktu` → `chromosome_gene` | 1 : N | Satu slot waktu dipakai banyak gen |
-| `hari` → `chromosome_gene` | 1 : N | Satu hari dipakai banyak gen |
-| `hari` → `slot_tetap` | 1 : N nullable | NULL berarti berlaku semua hari |
-| `waktu` → `slot_tetap` | 1 : N | Satu slot waktu bisa punya aturan tetap |
-| `mapel` → `slot_tetap` | 1 : N | Satu mapel bisa terikat ke beberapa slot tetap |

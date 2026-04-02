@@ -115,11 +115,16 @@ Mata pelajaran $m$ pada kelas $k$ sebaiknya dijadwalkan minimal pada $\lceil B(m
 $$v_{\text{sc1}} = \sum_{m \in M}\sum_{k \in K} \max\!\left(0,\ \left\lceil\frac{B(m,k)}{5}\right\rceil - \bigl|\{ h \mid \exists\, c \in C,\ c.m=m \wedge c.k=k \wedge c.h=h \}\bigr|\right)$$
 $$+\ \sum_{m \in M}\sum_{k \in K}\sum_{h \in H} \max\!\left(0,\ \bigl|\{ c \in C \mid c.m=m \wedge c.k=k \wedge c.h=h \}\bigr| - 5\right)$$
 
-**SC-2a. Batas Jam Mengajar Harian Guru**
+**SC-2. Kendala Kontiguitas Harian (Blok Pertemuan Mapel)**
+Mata pelajaran $m$ (kecuali reguler) pada kelas $k$ sebaiknya dijadwalkan dalam satu blok waktu yang berurutan (kontigu/tandem) per harinya. Mapel tersebut tidak boleh terpecah menjadi beberapa segmen yang disela oleh mapel lain pada hari itu. Mengabaikan slot "Istirahat" sebagai penyela. 
+Biarkan $E(m,k,h)$ menjadi jumlah kelompok kontigu (segmen terpisah) untuk mapel $m$, kelas $k$, hari $h$.
+$$v_{\text{sc3}} = \sum_{m \notin \{\text{Upacara, Bersih-bersih, Istirahat}\}} \sum_{k \in K} \sum_{h \in H} \max\!\left(0,\ E(m,k,h) - 1\right)$$
+
+**SC-3a. Batas Jam Mengajar Harian Guru**
 Jumlah slot mengajar guru $g$ pada hari $h$ sebaiknya tidak melebihi 7 slot.
 $$v_{\text{sc2a}} = \sum_{g \in G}\sum_{h \in H} \max\!\left(0,\ \bigl|\{ c \in C \mid c.g = g \wedge c.h = h \}\bigr| - 7\right)$$
 
-**SC-2b. Minimum Jam Mengajar Mingguan Guru PNS/P3K**
+**SC-3b. Minimum Jam Mengajar Mingguan Guru PNS/P3K**
 Guru $g \in G_{\text{pns}}$ (status PNS/P3K) sebaiknya memiliki total slot mengajar minimal 24 dalam satu minggu.
 $$v_{\text{sc2b}} = \sum_{g \in G_{\text{pns}}} \max\!\left(0,\ 24 - \bigl|\{ c \in C \mid c.g = g \}\bigr|\right)$$
 
