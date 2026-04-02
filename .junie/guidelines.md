@@ -52,6 +52,7 @@ print("SC-2a violation detected correctly!")
   - 2D NumPy integer array: `Shape (n_genes, 5)`.
   - Column indices: `0: mapel_id`, `1: guru_id`, `2: kelas_id`, `3: waktu_id`, `4: hari_id`.
   - `guru_id = -1` indicates no teacher (replaces `NULL`).
+  - `mapel_id = -1` indicates an empty slot / no subject (replaces `NULL`).
 - **Naming Convention**: Strictly use the `_id` suffix (e.g., `mapel_id`, `guru_id`).
 
 ---
@@ -71,7 +72,7 @@ $$
 
 **Gen** adalah satu kegiatan terjadwal, berisi lima informasi sekaligus:
 $$c = (m,\ g,\ k,\ t,\ h)$$
-Artinya: `mapel_id` $m$, diajarkan oleh `guru_id` $g$, untuk `kelas_id` $k$, di `waktu_id` $t$, pada `hari_id` $h$. Jika kegiatan tidak memiliki guru, maka $g = -1$.
+Artinya: `mapel_id` $m$, diajarkan oleh `guru_id` $g$, untuk `kelas_id` $k$, di `waktu_id` $t$, pada `hari_id` $h$. Jika kegiatan tidak memiliki guru, maka $g = -1$. Jika slot dibiarkan kosong, maka $m = -1$ dan $g = -1$.
 
 **Kromosom** adalah satu jadwal mingguan penuh:
 $$C = \{c_1,\ c_2,\ \dots,\ c_n\}$$
@@ -81,17 +82,22 @@ $$B : M \times K \rightarrow \mathbb{Z}_{\ge 0}$$
 Nilai $B$ adalah input dari database, kecuali untuk mapel khusus:
 - $B(\text{Upacara},\ k) = 1$
 - $B(\text{Bersih-bersih},\ k) = 1$
-- $B(\text{Istirahat},\ k) = 10$
+- $B(\text{Istirahat},\ k) = 9$
 
 ---
 ### Hard Constraint (Weight $w_n = 1000$)
 
 **1. Kendala Slot Waktu Tetap (Fixed Time Slots)**
-Beberapa slot waktu sudah ditentukan isinya sejak awal.
+Beberapa slot waktu sudah ditentukan isinya sejak awal, termasuk jam kepulangan hari Jumat.
 - $h = 1 \wedge t = 1 \implies m = \text{Upacara}, g = -1$
 - $h = 4 \wedge t = 1 \implies m = \text{Bersih-bersih}, g = -1$
-- $t \in \{5, 8\} \implies m = \text{Istirahat}, g = -1$
-Setiap satu gen yang menempati slot tersebut tapi berisi mata pelajaran yang salah dihitung 1 pelanggaran.
+- $t = 5 \implies m = \text{Istirahat}, g = -1$
+- $h \in \{1, 2, 3, 4\} \wedge t = 8 \implies m = \text{Istirahat}, g = -1$
+- $h = 5 \wedge t \ge 7 \implies m = -1, g = -1$ (Kosong/Pulang awal)
+
+Setiap satu gen yang menempati slot tersebut tapi berisi nilai yang salah dihitung 1 pelanggaran.
+
+*(Pre-computation rule: The total reguler teaching load $B(m,k)$ assigned by a human MUST NOT exceed 39 slots per week per class. The system should reject the input and throw an error before running the GA if it exceeds this capacity).*
 
 **2. Pengecualian Co-Teaching**
 Jika mata pelajaran $m$ termasuk dalam $M_{\text{co}} = \{\text{Agama/PABP},\ \text{Pilihan/Kejuruan}\}$ (`is_coteaching = 1` di database), maka beberapa gen dengan guru $g$ yang berbeda diperbolehkan memiliki kombinasi $(m, k, t, h)$ yang sama. HC-2 tidak menghasilkan penalti sendiri, hanya mendefinisikan pengecualian untuk HC-3.
@@ -111,22 +117,22 @@ $$v_4 = \bigl|\{(g,t,h) \mid g \neq -1 \wedge \exists\, c_i, c_j \in C,\ i \neq 
 ### Soft Constraint (Weight $w_n = 500$)
 
 **SC-1. Penyebaran Mata Pelajaran yang Merata**
-Mata pelajaran $m$ pada kelas $k$ sebaiknya dijadwalkan minimal pada $\lceil B(m,k)/5 \rceil$ hari yang berbeda. Maksimal 5 slot per hari untuk satu mata pelajaran yang sama.
-$$v_{\text{sc1}} = \sum_{m \in M}\sum_{k \in K} \max\!\left(0,\ \left\lceil\frac{B(m,k)}{5}\right\rceil - \bigl|\{ h \mid \exists\, c \in C,\ c.m=m \wedge c.k=k \wedge c.h=h \}\bigr|\right)$$
-$$+\ \sum_{m \in M}\sum_{k \in K}\sum_{h \in H} \max\!\left(0,\ \bigl|\{ c \in C \mid c.m=m \wedge c.k=k \wedge c.h=h \}\bigr| - 5\right)$$
+Mata pelajaran $m$ (selain `NULL`) pada kelas $k$ sebaiknya dijadwalkan minimal pada $\lceil B(m,k)/5 \rceil$ hari yang berbeda. Maksimal 5 slot per hari untuk satu mata pelajaran yang sama.
+$$v_{\text{sc1}} = \sum_{m \in M \setminus \{-1\}}\sum_{k \in K} \max\!\left(0,\ \left\lceil\frac{B(m,k)}{5}\right\rceil - \bigl|\{ h \mid \exists\, c \in C,\ c.m=m \wedge c.k=k \wedge c.h=h \}\bigr|\right)$$
+$$+\ \sum_{m \in M \setminus \{-1\}}\sum_{k \in K}\sum_{h \in H} \max\!\left(0,\ \bigl|\{ c \in C \mid c.m=m \wedge c.k=k \wedge c.h=h \}\bigr| - 5\right)$$
 
-**SC-2. Kendala Kontiguitas Harian (Blok Pertemuan Mapel)**
-Mata pelajaran $m$ (kecuali reguler) pada kelas $k$ sebaiknya dijadwalkan dalam satu blok waktu yang berurutan (kontigu/tandem) per harinya. Mapel tersebut tidak boleh terpecah menjadi beberapa segmen yang disela oleh mapel lain pada hari itu. Mengabaikan slot "Istirahat" sebagai penyela. 
-Biarkan $E(m,k,h)$ menjadi jumlah kelompok kontigu (segmen terpisah) untuk mapel $m$, kelas $k$, hari $h$.
-$$v_{\text{sc3}} = \sum_{m \notin \{\text{Upacara, Bersih-bersih, Istirahat}\}} \sum_{k \in K} \sum_{h \in H} \max\!\left(0,\ E(m,k,h) - 1\right)$$
+**SC-2a. Batas Jam Mengajar Harian Guru**
+Jumlah slot mengajar guru $g$ ($g \neq -1$) pada hari $h$ sebaiknya tidak melebihi 7 slot.
+$$v_{\text{sc2a}} = \sum_{g \in G \setminus \{-1\}}\sum_{h \in H} \max\!\left(0,\ \bigl|\{ c \in C \mid c.g = g \wedge c.h = h \}\bigr| - 7\right)$$
 
-**SC-3a. Batas Jam Mengajar Harian Guru**
-Jumlah slot mengajar guru $g$ pada hari $h$ sebaiknya tidak melebihi 7 slot.
-$$v_{\text{sc2a}} = \sum_{g \in G}\sum_{h \in H} \max\!\left(0,\ \bigl|\{ c \in C \mid c.g = g \wedge c.h = h \}\bigr| - 7\right)$$
-
-**SC-3b. Minimum Jam Mengajar Mingguan Guru PNS/P3K**
+**SC-2b. Minimum Jam Mengajar Mingguan Guru PNS/P3K**
 Guru $g \in G_{\text{pns}}$ (status PNS/P3K) sebaiknya memiliki total slot mengajar minimal 24 dalam satu minggu.
 $$v_{\text{sc2b}} = \sum_{g \in G_{\text{pns}}} \max\!\left(0,\ 24 - \bigl|\{ c \in C \mid c.g = g \}\bigr|\right)$$
+
+**SC-3. Kendala Kontiguitas Harian (Blok Pertemuan Mapel)**
+Mata pelajaran $m$ (reguler, non-NULL) pada kelas $k$ sebaiknya dijadwalkan dalam satu blok waktu yang berurutan (kontigu/tandem) per harinya. Mapel tersebut tidak boleh terpecah menjadi beberapa segmen yang disela oleh mapel lain pada hari itu. Mengabaikan slot "Istirahat" sebagai penyela. 
+Biarkan $E(m,k,h)$ menjadi jumlah kelompok kontigu (segmen terpisah) untuk mapel $m$, kelas $k$, hari $h$.
+$$v_{\text{sc3}} = \sum_{m \notin \{\text{Upacara, Bersih-bersih, Istirahat, -1}\}} \sum_{k \in K} \sum_{h \in H} \max\!\left(0,\ E(m,k,h) - 1\right)$$
 
 ---
 ### Fungsi Penalti

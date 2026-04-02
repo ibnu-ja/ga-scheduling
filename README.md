@@ -6,26 +6,26 @@ Himpunan:
 - $G$: semua guru
 - $K$: semua kelas
 - $T$: jam pelajaran, $\{1,2,\dots,11\}$
-- $H$: $\{\text{Senin, Selasa, Rabu, Kamis, Jumat}\}, \quad |H| = 5.$
+- $H$: $\{\text{Senin(1), Selasa(2), Rabu(3), Kamis(4), Jumat(5)}\}, \quad |H| = 5.$
 
 Gen adalah satu kegiatan terjadwal, berisi lima informasi sekaligus:
-$$c = (m,\ g,\ k,\ t,\ h)$$
-Artinya: mapel $m$, diajarkan oleh guru $g$, untuk kelas $k$, di slot waktu $t$, pada hari $h$. Jika kegiatan tidak memiliki guru (seperti Upacara), maka $g$ diisi kosong atau `NULL`.
+$$c = (m, g, k, t, h)$$
+Artinya: mapel $m$, diajarkan oleh guru $g$, untuk kelas $k$, di slot waktu $t$, pada hari $h$. Jika kegiatan tidak memiliki guru (seperti Upacara), maka $g$ diisi kosong atau `NULL`. Jika slot waktu dibiarkan kosong (seperti jadwal pulang lebih awal), maka $m$ dan $g$ diisi `NULL`.
 
 Kromosom adalah satu jadwal mingguan penuh, yaitu kumpulan semua gen:
-$$C = \{c_1,\ c_2,\ \dots,\ c_n\}$$
+$$C = \{c_1, c_2, \dots, c_n\}$$
 
-Fungsi beban mengajar $B$ adalah tabel jatah pertemuan. Untuk setiap pasangan mapel dan kelas, $B$ menyimpan berapa kali mapel tersebut harus muncul dalam satu minggu. Contoh: $B(\text{Matematika},\ \text{kelas XII PPLG}) = 4$ artinya Matematika harus muncul 4 kali seminggu di kelas XII PPLG. Secara formal:
+Fungsi beban mengajar $B$ adalah tabel jatah pertemuan. Untuk setiap pasangan mapel dan kelas, $B$ menyimpan berapa kali mapel tersebut harus muncul dalam satu minggu. Contoh: $B(\text{Matematika}, \text{kelas XII PPLG}) = 4$ artinya Matematika harus muncul 4 kali seminggu di kelas XII PPLG. Secara formal:
 $$B : M \times K \rightarrow \mathbb{Z}_{\ge 0}$$
 Dibaca: fungsi $B$ menerima input pasangan $(m, k)$ dan menghasilkan bilangan bulat nol atau lebih. Nilai $B$ adalah input dari manusia, kecuali untuk mapel khusus yang sudah ditetapkan:
 
 | Mapel | Nilai $B$ untuk semua kelas |
 |---|---|
-| Upacara | $B(\text{Upacara},\ k) = 1$ |
-| Bersih-bersih | $B(\text{Bersih-bersih},\ k) = 1$ |
-| Istirahat | $B(\text{Istirahat},\ k) = 2 \times 5 = 10$ |
+| Upacara | $B(\text{Upacara}, k) = 1$ |
+| Bersih-bersih | $B(\text{Bersih-bersih}, k) = 1$ |
+| Istirahat | $B(\text{Istirahat}, k) = 9$ |
 
-Istirahat bernilai 10 karena terjadi 2 kali setiap hari (slot ke-5 dan ke-8) selama 5 hari.
+Istirahat bernilai 9 karena terjadi 2 kali pada hari Senin–Kamis (slot ke-5 dan ke-8) dan 1 kali pada hari Jumat (slot ke-5).
 
 ---
 
@@ -33,19 +33,24 @@ Istirahat bernilai 10 karena terjadi 2 kali setiap hari (slot ke-5 dan ke-8) sel
 
 ### 1. Kendala Slot Waktu Tetap (Fixed Time Slots)
 
-Beberapa slot waktu sudah ditentukan isinya sejak awal dan tidak boleh diubah oleh GA. Senin jam pertama selalu Upacara, Kamis jam pertama selalu Bersih-bersih, dan jam ke-5 serta ke-8 di hari mana pun selalu Istirahat — semuanya tanpa guru, untuk semua kelas.
+Beberapa slot waktu sudah ditentukan isinya sejak awal dan tidak boleh diubah oleh GA. Ini mencakup kegiatan rutin sekolah dan aturan jam pulang lebih awal pada hari Jumat.
 
-Violation dihitung dengan mencari gen yang menempati slot-slot tersebut tetapi berisi mata pelajaran yang salah. Setiap satu gen yang salah dihitung satu pelanggaran.
+Violation dihitung dengan mencari gen yang menempati slot-slot tersebut tetapi berisi mata pelajaran atau guru yang salah. Setiap satu gen yang salah dihitung satu pelanggaran.
 
-Jika hari $h$ adalah Senin dan waktu $t =1$, maka gen harus memiliki mata pelajaran $m = \text{Upacara}$ dan guru $g = \text{NULL}$, untuk semua kelas $k$.
-Jika hari $h$ adalah Kamis dan waktu $t = 1$, maka gen harus memiliki mata pelajaran $m = \text{Bersih-bersih}$ dan guru $g = \text{NULL}$, untuk semua kelas $k$.
-Jika waktu $t \in \{5,8\}$ pada hari apa pun $h$, maka gen harus memiliki mata pelajaran
-$$m = \text{Istirahat}, \quad g = \text{NULL}$$
-untuk semua kelas $k$.
+Aturan slot tetap untuk semua kelas $k$:
+1. Jika hari $h = 1$ (Senin) dan waktu $t = 1$, maka mapel $m = \text{Upacara}$ dan guru $g = \text{NULL}$.
+2. Jika hari $h = 4$ (Kamis) dan waktu $t = 1$, maka mapel $m = \text{Bersih-bersih}$ dan guru $g = \text{NULL}$.
+3. Jika waktu $t = 5$ pada hari apa pun $h$, maka mapel $m = \text{Istirahat}$ dan guru $g = \text{NULL}$.
+4. Jika waktu $t = 8$ pada hari $h \in \{1, 2, 3, 4\}$ (Senin–Kamis), maka mapel $m = \text{Istirahat}$ dan guru $g = \text{NULL}$.
+5. Jika hari $h = 5$ (Jumat) dan waktu $t \in \{7, 8, 9, 10, 11\}$, slot dibiarkan kosong karena siswa pulang lebih awal. Maka mapel $m = \text{NULL}$ dan guru $g = \text{NULL}$.
 
-$$v_1 = \bigl|\{ c \in C \mid h = \text{Senin} \wedge t = 1 \wedge m \neq \text{Upacara} \}\bigr|$$
-$$+\ \bigl|\{ c \in C \mid h = \text{Kamis} \wedge t = 1 \wedge m \neq \text{Bersih-bersih} \}\bigr|$$
-$$+\ \bigl|\{ c \in C \mid t \in \{5, 8\} \wedge m \neq \text{Istirahat} \}\bigr|$$
+$$v_1 = \bigl|\{ c \in C \mid h = 1 \wedge t = 1 \wedge m \neq \text{Upacara} \}\bigr|$$
+$$+ \bigl|\{ c \in C \mid h = 4 \wedge t = 1 \wedge m \neq \text{Bersih-bersih} \}\bigr|$$
+$$+ \bigl|\{ c \in C \mid t = 5 \wedge m \neq \text{Istirahat} \}\bigr|$$
+$$+ \bigl|\{ c \in C \mid h \in \{1, 2, 3, 4\} \wedge t = 8 \wedge m \neq \text{Istirahat} \}\bigr|$$
+$$+ \bigl|\{ c \in C \mid h = 5 \wedge t \ge 7 \wedge (m \neq \text{NULL} \vee g \neq \text{NULL}) \}\bigr|$$
+
+*(Catatan: Kapasitas maksimum mapel reguler per kelas per minggu adalah 39 slot. Jika total beban mengajar $B$ yang diinputkan manusia melebihi 39, sistem harus menolak proses penjadwalan sebelum GA berjalan untuk menghindari infinite loop).*
 
 ---
 
@@ -56,7 +61,7 @@ Beberapa mata pelajaran seperti PABP dan Pilihan dapat diajarkan oleh lebih dari
 Hard constrain ke-2 ini tidak menghasilkan penalti sendiri. Ia hanya mendefinisikan himpunan pengecualian yang dipakai oleh hard constrain ke-3. Seluruh mata pelajaran yang masuk ke dalam himpunan ini dikecualikan dari pengecekan konflik kelas.
 
 Jika mata pelajaran $m$ termasuk dalam
-$$M_{\text{co}} = \{\text{PABP},\ \text{Pilihan}\}$$
+$$M_{\text{co}} = \{\text{PABP}, \text{Pilihan}\}$$
 maka beberapa gen dengan guru $g$ yang berbeda diperbolehkan memiliki kombinasi $(m, k, t, h)$ yang sama. Dengan demikian, kendala konflik kelas pada hard constrain ke-3 tidak berlaku untuk mata pelajaran tersebut.
 
 ---
@@ -69,7 +74,7 @@ Violation dihitung dengan mencari kombinasi $(k, t, h)$ yang ditempati lebih dar
 
 Pada kombinasi hari $h$, waktu $t$, dan kelas $k$ yang sama, hanya diperbolehkan terdapat satu gen, kecuali jika mata pelajaran $m \in M_{\text{co}}$.
 
-$$v_3 = \bigl|\{(k,t,h) \mid \exists\, c_i, c_j \in C,\ i \neq j,\ k_i = k_j \wedge t_i = t_j \wedge h_i = h_j \wedge (m_i \notin M_{\text{co}} \vee m_j \notin M_{\text{co}})\}\bigr|$$
+$$v_3 = \bigl|\{(k,t,h) \mid \exists c_i, c_j \in C, i \neq j, k_i = k_j \wedge t_i = t_j \wedge h_i = h_j \wedge (m_i \notin M_{\text{co}} \vee m_j \notin M_{\text{co}})\}\bigr|$$
 
 ---
 
@@ -92,7 +97,7 @@ Setiap mata pelajaran pada setiap kelas memiliki jatah kemunculan per minggu. Ju
 Violation dihitung dengan menjumlahkan selisih antara kemunculan aktual dan jatah $B(m,k)$ untuk setiap pasangan mata pelajaran dan kelas. Nilai absolut memastikan kelebihan maupun kekurangan sama-sama dihitung sebagai pelanggaran.
 
 Setiap mata pelajaran $m$ pada kelas $k$ memiliki jatah kemunculan $B(m,k)$ per minggu. Jumlah gen dengan pasangan $(m,k)$ dalam satu kromosom harus memenuhi $|\{ c \mid (m,k) \}| = B(m,k)$, dengan nilai tetap untuk mata pelajaran khusus:
-$$B(\text{Upacara},k) = 1, \quad B(\text{Bersih-bersih},k) = 1, \quad B(\text{Istirahat},k) = 10 \quad \forall\, k \in K$$
+$$B(\text{Upacara},k) = 1, \quad B(\text{Bersih-bersih},k) = 1, \quad B(\text{Istirahat},k) = 9 \quad \forall\, k \in K$$
 
 $$v_5 = \sum_{m \in M} \sum_{k \in K} \left| \left|\{ c \in C \mid c.m = m \wedge c.k = k \}\right| - B(m,k) \right|$$
 
@@ -108,24 +113,12 @@ Violation dihitung dalam dua bagian. Bagian pertama menghitung kekurangan jumlah
 
 Mata pelajaran $m$ pada kelas $k$ sebaiknya dijadwalkan minimal pada $\lceil B(m,k)/5 \rceil$ hari yang berbeda. Contoh: beban 11 → minimal $\lceil 11/5 \rceil = 3$ hari, pembagian 5,3,3 atau 4,4,3 keduanya oke. Beban 3 → cukup 1 hari.
 
-$$v_{\text{sc1}} = \sum_{m \in M}\sum_{k \in K} \max\!\left(0,\ \left\lceil\frac{B(m,k)}{5}\right\rceil - \bigl|\{ h \mid \exists\, c \in C,\ c.m=m \wedge c.k=k \wedge c.h=h \}\bigr|\right)$$
-$$+\ \sum_{m \in M}\sum_{k \in K}\sum_{h \in H} \max\!\left(0,\ \bigl|\{ c \in C \mid c.m=m \wedge c.k=k \wedge c.h=h \}\bigr| - 5\right)$$
+$$v_{\text{sc1}} = \sum_{m \in M \setminus \{\text{NULL}\}}\sum_{k \in K} \max\!\left(0, \left\lceil\frac{B(m,k)}{5}\right\rceil - \bigl|\{ h \mid \exists\, c \in C, c.m=m \wedge c.k=k \wedge c.h=h \}\bigr|\right)$$
+$$+ \sum_{m \in M \setminus \{\text{NULL}\}}\sum_{k \in K}\sum_{h \in H} \max\!\left(0, \bigl|\{ c \in C \mid c.m=m \wedge c.k=k \wedge c.h=h \}\bigr| - 5\right)$$
 
 ---
 
-### 2. Kendala Kontiguitas Harian (Blok Pertemuan Mapel)
-
-Mata pelajaran yang sama jika dijadwalkan pada hari yang sama di satu kelas sebaiknya berada dalam satu blok waktu yang berurutan (kontigu/tandem). Mata pelajaran tersebut tidak boleh terpecah menjadi beberapa segmen yang disela oleh mata pelajaran lain pada hari itu. Slot Istirahat tidak dianggap sebagai penyela. Kendala ini tidak berlaku untuk kegiatan khusus (Upacara, Bersih-bersih, Istirahat).
-
-Violation dihitung berdasarkan jumlah segmen terpisah (blok) per mata pelajaran per hari yang melebihi batas wajar. Idealnya, sebuah mata pelajaran reguler yang diajarkan pada suatu hari tidak terputus oleh mata pelajaran lain, sehingga hanya membentuk tepat 1 blok. Pengurangan dengan angka 1 pada formula berfungsi sebagai batas toleransi kemunculan tersebut. Jika mata pelajaran terpecah menjadi dua blok yang terpisah, maka blok tambahan tersebut dihitung sebagai satu pelanggaran. Fungsi maksimum memastikan bahwa jika mata pelajaran tidak diajarkan sama sekali pada hari tersebut, nilai pelanggaran tetap nol tanpa menghasilkan penalti negatif.
-
-Biarkan $E(m,k,h)$ menjadi jumlah blok waktu kontigu (segmen terpisah) untuk mata pelajaran $m$ di kelas $k$ pada hari $h$, dengan mengabaikan slot Istirahat di antara slot mata pelajaran yang sama.
-
-$$v_{\text{sc3}} = \sum_{m \notin \{\text{Upacara, Bersih-bersih, Istirahat}\}} \sum_{k \in K} \sum_{h \in H} \max\!\left(0,\ E(m,k,h) - 1\right)$$
-
----
-
-### 3. Penyebaran Jam Mengajar Guru
+### 2. Penyebaran Jam Mengajar Guru
 #### a. Batas Jam Mengajar Harian Guru
 
 Guru sebaiknya tidak mengajar terlalu banyak dalam satu hari meskipun secara total mingguan masih dalam batas wajar. Struktur slot sudah menjamin maksimal 4 slot berturut-turut secara alami karena Istirahat di jam ke-5 dan ke-8, sehingga tidak perlu constraint tambahan untuk slot berturut-turut.
@@ -134,7 +127,7 @@ Violation dihitung per slot kelebihan di atas 7 pada hari yang sama. Setiap satu
 
 Jumlah slot mengajar guru $g$ pada hari $h$ sebaiknya tidak melebihi 7 slot.
 
-$$v_{\text{sc2a}} = \sum_{g \in G}\sum_{h \in H} \max\!\left(0,\ \bigl|\{ c \in C \mid c.g = g \wedge c.h = h \}\bigr| - 7\right)$$
+$$v_{\text{sc2a}} = \sum_{g \in G \setminus \{\text{NULL}\}}\sum_{h \in H} \max\!\left(0,\ \bigl|\{ c \in C \mid c.g = g \wedge c.h = h \}\bigr| - 7\right)$$
 
 ---
 
@@ -150,6 +143,18 @@ $$G_{\text{pns}} = \{ g \in G \mid \text{status}(g) \in \{\text{PNS},\ \text{P3K
 Guru $g \in G_{\text{pns}}$ sebaiknya memiliki total slot mengajar minimal 24 dalam satu minggu.
 
 $$v_{\text{sc2b}} = \sum_{g \in G_{\text{pns}}} \max\!\left(0,\ 24 - \bigl|\{ c \in C \mid c.g = g \}\bigr|\right)$$
+
+---
+
+### 3. Kendala Kontiguitas Harian (Blok Pertemuan Mapel)
+
+Mata pelajaran yang sama jika dijadwalkan pada hari yang sama di satu kelas sebaiknya berada dalam satu blok waktu yang berurutan (kontigu/tandem). Mata pelajaran tersebut tidak boleh terpecah menjadi beberapa segmen yang disela oleh mata pelajaran lain pada hari itu. Slot Istirahat tidak dianggap sebagai penyela. Kendala ini tidak berlaku untuk kegiatan khusus (Upacara, Bersih-bersih, Istirahat) dan slot kosong (`NULL`).
+
+Violation dihitung berdasarkan jumlah segmen terpisah (blok) per mata pelajaran per hari yang melebihi batas wajar. Idealnya, sebuah mata pelajaran reguler yang diajarkan pada suatu hari tidak terputus oleh mata pelajaran lain, sehingga hanya membentuk tepat 1 blok. Pengurangan dengan angka 1 pada formula berfungsi sebagai batas toleransi kemunculan tersebut. Jika mata pelajaran terpecah menjadi dua blok yang terpisah, maka blok tambahan tersebut dihitung sebagai satu pelanggaran. Fungsi maksimum memastikan bahwa jika mata pelajaran tidak diajarkan sama sekali pada hari tersebut, nilai pelanggaran tetap nol tanpa menghasilkan penalti negatif.
+
+Biarkan $E(m,k,h)$ menjadi jumlah blok waktu kontigu (segmen terpisah) untuk mata pelajaran $m$ di kelas $k$ pada hari $h$, dengan mengabaikan slot Istirahat di antara slot mata pelajaran yang sama.
+
+$$v_{\text{sc3}} = \sum_{m \notin \{\text{Upacara, Bersih-bersih, Istirahat, NULL}\}} \sum_{k \in K} \sum_{h \in H} \max\!\left(0,\ E(m,k,h) - 1\right)$$
 
 ---
 
@@ -190,7 +195,7 @@ JOIN chromosome c ON cg.chromosome_id = c.id
 JOIN hari h ON cg.hari_id = h.id
 JOIN waktu w ON cg.waktu_id = w.id
 JOIN kelas k ON cg.kelas_id = k.id
-JOIN mapel m ON cg.mapel_id = m.id
+LEFT JOIN mapel m ON cg.mapel_id = m.id
 LEFT JOIN guru g ON cg.guru_id = g.id
 WHERE c.status = 'aktif'
 ORDER BY h.id, w.id, k.nama;
