@@ -32,13 +32,16 @@ def crossover(parent1, parent2, crossover_rate=0.8):
         return child1, child2
     return parent1.copy(), parent2.copy()
 
-def mutate(chromosome, mutation_rate=0.05):
+def mutate(chromosome, special_ids, mutation_rate=0.05):
     # Randomly change waktu and hari
     mask = np.random.rand(len(chromosome)) < mutation_rate
     if np.any(mask):
         # We should NOT mutate fixed mapels (Upacara, Bersih, Istirahat)
         # to preserve their fixed slots and avoid high penalties.
-        fixed_mapels_mask = np.isin(chromosome[:, MAPEL_IDX], [1, 2, 3])
+        upacara_id = special_ids.get('upacara')
+        bersih_id = special_ids.get('bersih')
+        istirahat_id = special_ids.get('istirahat')
+        fixed_mapels_mask = np.isin(chromosome[:, MAPEL_IDX], [upacara_id, bersih_id, istirahat_id])
         # Only mutate genes that are NOT special mapels
         actual_mutation_mask = mask & ~fixed_mapels_mask
     
@@ -126,9 +129,9 @@ def run_ga(pop_size=100, generations=1000):
         for i in range(0, pop_size - 1, 2):
             p1, p2 = selected[i], selected[i+1]
             c1, c2 = crossover(p1, p2)
-            new_population.append(mutate(c1))
+            new_population.append(mutate(c1, special_ids))
             if len(new_population) < pop_size:
-                new_population.append(mutate(c2))
+                new_population.append(mutate(c2, special_ids))
             
         population = new_population
     

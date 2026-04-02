@@ -7,11 +7,6 @@ HARI_IDS = list(range(1, 6))  # Senin (1) s/d Jumat (5)
 WAKTU_IDS = list(range(1, 12))  # Slot 1 s/d 11
 
 
-# IDs constants (Strict Identifiers)
-UPACARA_ID = 1
-BERSIH_ID = 2
-ISTIRAHAT_ID = 3
-
 def generate_chromosome(beban_data, guru_mapping, special_ids):
     """
     Membuat 1 kromosom kandidat.
@@ -19,6 +14,10 @@ def generate_chromosome(beban_data, guru_mapping, special_ids):
     """
     genes = []
     
+    upacara_id = special_ids.get('upacara')
+    bersih_id = special_ids.get('bersih')
+    istirahat_id = special_ids.get('istirahat')
+
     # 1. Fetch all class IDs
     from database import get_connection
     conn = get_connection()
@@ -31,22 +30,26 @@ def generate_chromosome(beban_data, guru_mapping, special_ids):
     # B(Upacara, k) = 1, B(Bersih, k) = 1, B(Istirahat, k) = 10
     for k_id in kelas_ids:
         # Senin Jam 1: Upacara
-        genes.append([UPACARA_ID, -1, k_id, 1, 1])
+        if upacara_id is not None:
+            genes.append([upacara_id, -1, k_id, 1, 1])
         # Kamis Jam 1: Bersih-bersih
-        genes.append([BERSIH_ID, -1, k_id, 1, 4])
+        if bersih_id is not None:
+            genes.append([bersih_id, -1, k_id, 1, 4])
         # Jam 5 & 8 Every day: Istirahat
-        for h_id in HARI_IDS:
-            genes.append([ISTIRAHAT_ID, -1, k_id, 5, h_id])
-            genes.append([ISTIRAHAT_ID, -1, k_id, 8, h_id])
+        if istirahat_id is not None:
+            for h_id in HARI_IDS:
+                genes.append([istirahat_id, -1, k_id, 5, h_id])
+                genes.append([istirahat_id, -1, k_id, 8, h_id])
 
     # 3. Add Regular Mapels from beban_mengajar
+    special_ids_set = {upacara_id, bersih_id, istirahat_id}
     for beban in beban_data:
         id_mapel = beban['id_mapel']
         id_kelas = beban['id_kelas']
         jumlah_waktu = beban['jumlah_waktu']
         
         # Skip if it's a special mapel (already handled)
-        if id_mapel in [UPACARA_ID, BERSIH_ID, ISTIRAHAT_ID]:
+        if id_mapel in special_ids_set:
             continue
 
         daftar_guru_tersedia = guru_mapping.get(id_mapel, [-1])
