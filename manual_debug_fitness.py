@@ -17,7 +17,7 @@ class MarkdownReporter:
         self.file.write(text + "\n")
 
     def heading(self, text, level=1):
-        self.write("#" * level + " " + text + "\n")
+        self.file.write("\n" + "#" * level + " " + text + "\n\n")
 
     def math_inline(self, text):
         return f"${text}$"
@@ -326,7 +326,7 @@ def run_ga_cycle(pop_name, reporter, special_ids, filter_type="slot", filter_val
         
         reporter.write(f"**Kalkulasi Akhir $C_{{{i+1}}}$:**")
         reporter.write(f"- Total Penalti ($p_{{total}}$): {details['p_total']}")
-        reporter.write(f"- Fitness Score ($f$): ${format_fitness_scientific(score)}$\n")
+        reporter.write(f"- Fitness Score ($f$): ${format_fitness_scientific(score)}$")
 
     # --- TAHAP 2: SELEKSI INDUK ---
     reporter.heading("Tahap 2: Seleksi Induk (Tournament Selection)", level=3)
@@ -339,7 +339,7 @@ def run_ga_cycle(pop_name, reporter, special_ids, filter_type="slot", filter_val
     reporter.write(f"**Turnamen 1:**")
     reporter.write(f"- Kandidat A: $C_{{{idx1+1}}}$ ($f = {format_fitness_scientific(fitness_scores[idx1])}$)")
     reporter.write(f"- Kandidat B: $C_{{{idx2+1}}}$ ($f = {format_fitness_scientific(fitness_scores[idx2])}$)")
-    reporter.write(f"- Hasil: $C_{{{p1_idx+1}}}$ terpilih sebagai Induk 1 ($P_1$).\n")
+    reporter.write(f"- Hasil: $C_{{{p1_idx+1}}}$ terpilih sebagai Induk 1 ($P_1$).")
 
     idx3, idx4 = random.sample(range(pop_size), 2)
     p2_idx = idx3 if fitness_scores[idx3] > fitness_scores[idx4] else idx4
@@ -347,7 +347,7 @@ def run_ga_cycle(pop_name, reporter, special_ids, filter_type="slot", filter_val
     reporter.write(f"**Turnamen 2:**")
     reporter.write(f"- Kandidat A: $C_{{{idx3+1}}}$ ($f = {format_fitness_scientific(fitness_scores[idx3])}$)")
     reporter.write(f"- Kandidat B: $C_{{{idx4+1}}}$ ($f = {format_fitness_scientific(fitness_scores[idx4])}$)")
-    reporter.write(f"- Hasil: $C_{{{p2_idx+1}}}$ terpilih sebagai Induk 2 ($P_2$).\n")
+    reporter.write(f"- Hasil: $C_{{{p2_idx+1}}}$ terpilih sebagai Induk 2 ($P_2$).")
     
     parent1 = mini_population[p1_idx]
     parent2 = mini_population[p2_idx]
@@ -378,7 +378,7 @@ def run_ga_cycle(pop_name, reporter, special_ids, filter_type="slot", filter_val
 
     reporter.write(f"Anak yang terbentuk memiliki $n = {len(child_raw)}$ gen.")
     reporter.write(f"- Gen $0$ sampai ${point-1}$ diambil dari $P_1$.")
-    reporter.write(f"- Gen ${point}$ sampai akhir diambil dari $P_2$.\n")
+    reporter.write(f"- Gen ${point}$ sampai akhir diambil dari $P_2$.")
 
     # --- TAHAP 4: MUTASI ---
     reporter.heading("Tahap 4: Mutasi (Variasi Genetik)", level=3)
@@ -415,7 +415,7 @@ def run_ga_cycle(pop_name, reporter, special_ids, filter_type="slot", filter_val
     reporter.write(f"- Total Gen ($n_{{child}}$): {len(child_raw)}")
     reporter.write(f"- Gen Terkena Mask Mutasi: {np.sum(mask)}")
     reporter.write(f"- Gen Terproteksi (Fixed Slot): {np.sum(fixed_mask)}")
-    reporter.write(f"- Gen yang Benar-benar Bermutasi: {len(indices_to_mutate)}\n")
+    reporter.write(f"- Gen yang Benar-benar Bermutasi: {len(indices_to_mutate)}")
     
     child_mutated = child_raw.copy()
     if len(indices_to_mutate) > 0:
@@ -476,7 +476,7 @@ def run_ga_cycle(pop_name, reporter, special_ids, filter_type="slot", filter_val
             reporter.table_dual(df_c, f"Analisis Perhitungan {key.upper()} ($C_{{child}}$)")
 
     reporter.write(f"- Fitness Score: ${format_fitness_scientific(score_child)}$")
-    reporter.write(f"- Total Pelanggaran: {details_child['p_total']}\n")
+    reporter.write(f"- Total Pelanggaran: {details_child['p_total']}")
 
 def run_manual_debug(output_path):
     reporter = MarkdownReporter(output_path)
