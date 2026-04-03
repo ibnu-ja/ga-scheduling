@@ -200,3 +200,38 @@ LEFT JOIN guru g ON cg.guru_id = g.id
 WHERE c.status = 'aktif'
 ORDER BY h.id, w.id, k.nama;
 ```
+
+## Menjalankan Algoritma Genetika
+
+Setelah Anda melakukan *clone* repository ke environment *remote* Anda, lakukan langkah berikut untuk menjalankan algoritma genetika pada project ini:
+
+### 1. Buat dan Aktifkan Virtual Environment (Disarankan)
+
+Gunakan virtual environment agar *library* tidak bentrok dengan proyek lain.
+
+```shell script
+# Membuat virtual environment dengan nama .venv
+python3 -m venv .venv
+
+# Mengaktifkan virtual environment (Linux/Mac)
+source .venv/bin/activate
+
+# Mengaktifkan virtual environment (Windows - jika Anda menggunakan Windows di lokal)
+# .venv\Scripts\activate
+```
+
+### 2. Instal Dependencies dari `requirements.txt`
+
+File `requirements.txt` yang berisi daftar *library* yang dibutuhkan (seperti `numpy`). Jalankan perintah berikut:
+
+```shell script
+pip install -r requirements.txt
+```
+
+
+### 3. Jalankan Aplikasi
+Setelah semua instalasi selesai, baru Anda bisa menjalankan program utamanya:
+```shell script
+python3 main.py
+```
+atau bisa passing argument seperti `--gen 10 --pop 100` untuk menentukan jumlah generasi dan populasi.

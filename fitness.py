@@ -7,7 +7,7 @@ KELAS_IDX = 2
 WAKTU_IDX = 3
 HARI_IDX = 4
 
-def calculate_fitness(chromosome, special_ids=None):
+def calculate_fitness(chromosome, special_ids=None, return_details=False):
     """
     chromosome: 2D NumPy array [gen, attributes]
     special_ids: (Optional) dict from database.get_special_ids()
@@ -38,6 +38,9 @@ def calculate_fitness(chromosome, special_ids=None):
     W_HARD = 1000
     W_SOFT = 500
 
+    # Store individual penalties for details
+    details = {}
+
     # HC-1: Fixed Time Slots
     hc1_v = 0
     # Senin (1) Jam 1: Upacara
@@ -66,7 +69,9 @@ def calculate_fitness(chromosome, special_ids=None):
         # Violation if ANY mapel or guru is NOT -1
         hc1_v += np.sum((chromosome[mask_jumat_pulang, MAPEL_IDX] != -1) | (chromosome[mask_jumat_pulang, GURU_IDX] != -1))
     
-    p_total += hc1_v * W_HARD
+    hc1_p = hc1_v * W_HARD
+    p_total += hc1_p
+    details['hc1'] = {'v': int(hc1_v), 'p': int(hc1_p)}
 
     # HC-3: Kelas Conflict (Exclude Co-Teaching)
     # v3 = |{(k,t,h) | exists ci, cj, i!=j, ki=kj, ti=tj, hi=hj AND (mi not in Mco OR mj not in Mco)}|
@@ -86,7 +91,6 @@ def calculate_fitness(chromosome, special_ids=None):
         
         if has_non_co:
             # Violation if there's a non-co-teaching mapel and count > 1
-            # RENCANA PERUBAHAN: Gunakan (counts - 1) untuk penalti lebih berat
             hc3_v += (kth_counts[slot_idx] - 1)
         else:
             # ALL are co-teaching. Check if they have same mapel_id.
@@ -95,19 +99,25 @@ def calculate_fitness(chromosome, special_ids=None):
                 # Different co-teaching mapels in same slot
                 hc3_v += (kth_counts[slot_idx] - 1)
     
-    p_total += hc3_v * W_HARD
+    hc3_p = hc3_v * W_HARD
+    p_total += hc3_p
+    details['hc3'] = {'v': int(hc3_v), 'p': int(hc3_p)}
 
     # HC-4: Guru Conflict (Exclude g = -1)
+    hc4_v = 0
     mask_with_guru = chromosome[:, GURU_IDX] != -1
     guru_genes = chromosome[mask_with_guru]
     if len(guru_genes) > 0:
         _, counts = np.unique(guru_genes[:, [GURU_IDX, WAKTU_IDX, HARI_IDX]], axis=0, return_counts=True)
         hc4_v = np.sum(counts - 1)
-        p_total += hc4_v * W_HARD
+    
+    hc4_p = hc4_v * W_HARD
+    p_total += hc4_p
+    details['hc4'] = {'v': int(hc4_v), 'p': int(hc4_p)}
 
     # SC-1: Mapel Distribution
     sc1_v = 0
-    mask_regular = ~np.isin(chromosome[:, MAPEL_IDX], [upacara_id, bersih_id, istirahat_id])
+    mask_regular = ~np.isin(chromosome[:, MAPEL_IDX], [upacara_id, bersih_id, istirahat_id, -1])
     reg_genes = chromosome[mask_regular]
     
     if len(reg_genes) > 0:
@@ -122,7 +132,9 @@ def calculate_fitness(chromosome, special_ids=None):
         min_days_mk = np.ceil(total_slots_mk / 5.0).astype(int)
         sc1_v += np.sum(np.maximum(0, min_days_mk - actual_days_mk))
     
-    p_total += sc1_v * W_SOFT
+    sc1_p = sc1_v * W_SOFT
+    p_total += sc1_p
+    details['sc1'] = {'v': int(sc1_v), 'p': int(sc1_p)}
 
     # SC-2: Subject Continuity (E - 1 logic)
     sc2_v = 0
@@ -145,16 +157,23 @@ def calculate_fitness(chromosome, special_ids=None):
             
             sc2_v = np.sum(same_mkh & waktu_gap)
         
-    p_total += sc2_v * W_SOFT
+    sc2_p = sc2_v * W_SOFT
+    p_total += sc2_p
+    details['sc2'] = {'v': int(sc2_v), 'p': int(sc2_p)}
 
     # SC-3a: Guru Daily Limit (max 7 slots)
+    sc3a_v = 0
     if np.any(mask_with_guru):
         guru_day_genes = chromosome[mask_with_guru][:, [GURU_IDX, HARI_IDX]]
         _, counts = np.unique(guru_day_genes, axis=0, return_counts=True)
         sc3a_v = np.sum(np.maximum(0, counts - 7))
-        p_total += sc3a_v * W_SOFT
+    
+    sc3a_p = sc3a_v * W_SOFT
+    p_total += sc3a_p
+    details['sc3a'] = {'v': int(sc3a_v), 'p': int(sc3a_p)}
 
     # SC-3b: PNS/P3K Min Weekly (min 24 slots)
+    sc3b_v = 0
     if len(pns_p3k_ids) > 0:
         pns_list = list(pns_p3k_ids)
         mask_pns_present = np.isin(chromosome[:, GURU_IDX], pns_list)
@@ -166,9 +185,18 @@ def calculate_fitness(chromosome, special_ids=None):
         else:
             pns_counts_dict = {}
             
-        sc3b_v = 0
         for g_id in pns_list:
             sc3b_v += max(0, 24 - pns_counts_dict.get(g_id, 0))
-        p_total += sc3b_v * W_SOFT
+    
+    sc3b_p = sc3b_v * W_SOFT
+    p_total += sc3b_p
+    details['sc3b'] = {'v': int(sc3b_v), 'p': int(sc3b_p)}
 
-    return 1.0 / (1.0 + p_total)
+    fitness = 1.0 / (1.0 + p_total)
+    
+    if return_details:
+        details['p_total'] = int(p_total)
+        details['fitness'] = float(fitness)
+        return fitness, details
+        
+    return fitness
