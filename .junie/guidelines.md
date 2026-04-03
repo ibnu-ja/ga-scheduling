@@ -38,12 +38,12 @@ When adding new constraints or modifying existing ones in `fitness.py`, add a co
 import numpy as np
 from fitness import calculate_fitness
 
-# Test if SC-2a (Guru daily limit 7) works
+# Test if SC-3 (Guru daily limit 7) works
 # Array format: [mapel_id, guru_id, kelas_id, waktu_id, hari_id]
-bad_chromosome = np.array([[4, 100, 1, t, 1] for t in range(1, 9)])
+bad_chromosome = np.array([[4, 100, 1, t, 1] for t in [2, 3, 4, 6, 7, 9, 10, 11]])
 fitness = calculate_fitness(bad_chromosome)
 assert fitness < 1.0
-print("SC-2a violation detected correctly!")
+print("SC-3 violation detected correctly!")
 ```
 
 ## 3. Implementation Details & Code Style
@@ -99,19 +99,18 @@ Setiap satu gen yang menempati slot tersebut tapi berisi nilai yang salah dihitu
 
 *(Pre-computation rule: The total reguler teaching load $B(m,k)$ assigned by a human MUST NOT exceed 39 slots per week per class. The system should reject the input and throw an error before running the GA if it exceeds this capacity).*
 
-**2. Pengecualian Co-Teaching**
-Jika mata pelajaran $m$ termasuk dalam $M_{\text{co}} = \{\text{Agama/PABP},\ \text{Pilihan/Kejuruan}\}$ (`is_coteaching = 1` di database), maka beberapa gen dengan guru $g$ yang berbeda diperbolehkan memiliki kombinasi $(m, k, t, h)$ yang sama. HC-2 tidak menghasilkan penalti sendiri, hanya mendefinisikan pengecualian untuk HC-3.
+**2. Kendala Konflik Kelas (dengan Pengecualian Co-Teaching)**
+Satu kelas tidak boleh dijadwalkan melakukan dua kegiatan sekaligus pada hari dan jam yang sama. Beberapa mata pelajaran seperti PABP dan Pilihan dapat diajarkan oleh lebih dari satu guru secara bersamaan kepada kelompok siswa yang berbeda dalam kelas yang sama (*Co-Teaching*). Untuk mata pelajaran ini, kondisi yang biasanya dianggap konflik kelas justru diizinkan jika mata pelajarannya sama.
 
-**3. Kendala Konflik Kelas**
-Satu kelas tidak boleh dijadwalkan melakukan dua kegiatan sekaligus pada hari dan jam yang sama.
-$$v_3 = \bigl|\{(k,t,h) \mid \exists\, c_i, c_j \in C,\ i \neq j,\ k_i = k_j \wedge t_i = t_j \wedge h_i = h_j \wedge (m_i \notin M_{\text{co}} \vee m_j \notin M_{\text{co}})\}\bigr|$$
+Violation dihitung dengan mencari kombinasi $(k, t, h)$ yang ditempati lebih dari satu gen di luar pengecualian co-teaching.
+$$v_2 = \bigl|\{(k,t,h) \mid \exists\, c_i, c_j \in C,\ i \neq j,\ k_i = k_j \wedge t_i = t_j \wedge h_i = h_j \wedge (m_i \notin M_{\text{co}} \vee m_j \notin M_{\text{co}} \vee m_i \neq m_j)\}\bigr|$$
 
-**4. Kendala Konflik Guru**
+**3. Kendala Konflik Guru**
 Seorang guru tidak boleh mengajar di lebih dari satu kelas pada hari dan jam yang sama ($g \neq -1$).
-$$v_4 = \bigl|\{(g,t,h) \mid g \neq -1 \wedge \exists\, c_i, c_j \in C,\ i \neq j,\ g_i = g_j \wedge t_i = t_j \wedge h_i = h_j\}\bigr|$$
+$$v_3 = \bigl|\{(g,t,h) \mid g \neq -1 \wedge \exists\, c_i, c_j \in C,\ i \neq j,\ g_i = g_j \wedge t_i = t_j \wedge h_i = h_j\}\bigr|$$
 
-**5. Kendala Beban Mengajar (Teaching Load)**
-*Note for Agent: This is already perfectly satisfied during Step 3 (Initial Population Generation) because genes are created strictly based on the `beban_mengajar` table. You can skip calculating $v_5$ in `fitness.py`.*
+**4. Kendala Beban Mengajar (Teaching Load - Implicit)**
+*Note for Agent: This is already perfectly satisfied during Step 3 (Initial Population Generation) because genes are created strictly based on the `beban_mengajar` table and mutation only affects time/day. You can skip calculating $v_4$ in `fitness.py`.*
 
 ---
 ### Soft Constraint (Weight $w_n = 500$)
@@ -121,18 +120,16 @@ Mata pelajaran $m$ (selain `NULL`) pada kelas $k$ sebaiknya dijadwalkan minimal 
 $$v_{\text{sc1}} = \sum_{m \in M \setminus \{-1\}}\sum_{k \in K} \max\!\left(0,\ \left\lceil\frac{B(m,k)}{5}\right\rceil - \bigl|\{ h \mid \exists\, c \in C,\ c.m=m \wedge c.k=k \wedge c.h=h \}\bigr|\right)$$
 $$+\ \sum_{m \in M \setminus \{-1\}}\sum_{k \in K}\sum_{h \in H} \max\!\left(0,\ \bigl|\{ c \in C \mid c.m=m \wedge c.k=k \wedge c.h=h \}\bigr| - 5\right)$$
 
-**SC-2a. Batas Jam Mengajar Harian Guru**
-Jumlah slot mengajar guru $g$ ($g \neq -1$) pada hari $h$ sebaiknya tidak melebihi 7 slot.
-$$v_{\text{sc2a}} = \sum_{g \in G \setminus \{-1\}}\sum_{h \in H} \max\!\left(0,\ \bigl|\{ c \in C \mid c.g = g \wedge c.h = h \}\bigr| - 7\right)$$
-
-**SC-2b. Minimum Jam Mengajar Mingguan Guru PNS/P3K**
-Guru $g \in G_{\text{pns}}$ (status PNS/P3K) sebaiknya memiliki total slot mengajar minimal 24 dalam satu minggu.
-$$v_{\text{sc2b}} = \sum_{g \in G_{\text{pns}}} \max\!\left(0,\ 24 - \bigl|\{ c \in C \mid c.g = g \}\bigr|\right)$$
-
-**SC-3. Kendala Kontiguitas Harian (Blok Pertemuan Mapel)**
+**SC-2. Kendala Kontiguitas Harian (Blok Pertemuan Mapel)**
 Mata pelajaran $m$ (reguler, non-NULL) pada kelas $k$ sebaiknya dijadwalkan dalam satu blok waktu yang berurutan (kontigu/tandem) per harinya. Mapel tersebut tidak boleh terpecah menjadi beberapa segmen yang disela oleh mapel lain pada hari itu. Mengabaikan slot "Istirahat" sebagai penyela. 
 Biarkan $E(m,k,h)$ menjadi jumlah kelompok kontigu (segmen terpisah) untuk mapel $m$, kelas $k$, hari $h$.
-$$v_{\text{sc3}} = \sum_{m \notin \{\text{Upacara, Bersih-bersih, Istirahat, -1}\}} \sum_{k \in K} \sum_{h \in H} \max\!\left(0,\ E(m,k,h) - 1\right)$$
+$$v_{\text{sc2}} = \sum_{m \notin \{\text{Upacara, Bersih-bersih, Istirahat, -1}\}} \sum_{k \in K} \sum_{h \in H} \max\!\left(0,\ E(m,k,h) - 1\right)$$
+
+**SC-3. Kendala Beban Kerja Guru**
+Menggabungkan dua aturan beban kerja guru:
+- **Batas Harian (max 7 slot)**: $v_{\text{sc3a}} = \sum_{g \in G \setminus \{-1\}}\sum_{h \in H} \max\!\left(0,\ \bigl|\{ c \in C \mid c.g = g \wedge c.h = h \}\bigr| - 7\right)$
+- **Min Mingguan PNS (min 24 slot)**: $v_{\text{sc3b}} = \sum_{g \in G_{\text{pns}}} \max\!\left(0,\ 24 - \bigl|\{ c \in C \mid c.g = g \}\bigr|\right)$
+$$v_{\text{sc3}} = v_{\text{sc3a}} + v_{\text{sc3b}}$$
 
 ---
 ### Fungsi Penalti

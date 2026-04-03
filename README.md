@@ -54,52 +54,29 @@ $$+ \bigl|\{ c \in C \mid h = 5 \wedge t \ge 7 \wedge (m \neq \text{NULL} \vee g
 
 ---
 
-### 2. Pengecualian Co-Teaching
+### 2. Kendala Konflik Kelas (dengan Pengecualian Co-Teaching)
 
-Beberapa mata pelajaran seperti PABP dan Pilihan dapat diajarkan oleh lebih dari satu guru secara bersamaan kepada kelompok siswa yang berbeda dalam kelas yang sama. Untuk mata pelajaran ini, kondisi yang biasanya dianggap konflik kelas justru diizinkan.
+Satu kelas tidak boleh dijadwalkan melakukan dua kegiatan sekaligus pada hari dan jam yang sama. Beberapa mata pelajaran seperti PABP dan Pilihan dapat diajarkan oleh lebih dari satu guru secara bersamaan kepada kelompok siswa yang berbeda dalam kelas yang sama (*Co-Teaching*). Untuk mata pelajaran ini, kondisi yang biasanya dianggap konflik kelas justru diizinkan.
 
-Hard constrain ke-2 ini tidak menghasilkan penalti sendiri. Ia hanya mendefinisikan himpunan pengecualian yang dipakai oleh hard constrain ke-3. Seluruh mata pelajaran yang masuk ke dalam himpunan ini dikecualikan dari pengecekan konflik kelas.
+Violation dihitung dengan mencari kombinasi $(k, t, h)$ yang ditempati lebih dari satu gen di luar pengecualian co-teaching. Jika mata pelajaran $m \in M_{\text{co}} = \{\text{PABP, Pilihan}\}$, maka beberapa gen diperbolehkan memiliki kombinasi $(m, k, t, h)$ yang sama selama mata pelajarannya sama. Jika berbeda atau bukan co-teaching, maka dihitung satu pelanggaran.
 
-Jika mata pelajaran $m$ termasuk dalam
-$$M_{\text{co}} = \{\text{PABP}, \text{Pilihan}\}$$
-maka beberapa gen dengan guru $g$ yang berbeda diperbolehkan memiliki kombinasi $(m, k, t, h)$ yang sama. Dengan demikian, kendala konflik kelas pada hard constrain ke-3 tidak berlaku untuk mata pelajaran tersebut.
+$$v_2 = \bigl|\{(k,t,h) \mid \exists c_i, c_j \in C, i \neq j, k_i = k_j \wedge t_i = t_j \wedge h_i = h_j \wedge (m_i \notin M_{\text{co}} \vee m_j \notin M_{\text{co}} \vee m_i \neq m_j)\}\bigr|$$
 
 ---
 
-### 3. Kendala Konflik Kelas
-
-Satu kelas tidak boleh dijadwalkan melakukan dua kegiatan sekaligus pada hari dan jam yang sama. Pengecualian berlaku untuk mata pelajaran co-teaching yang sudah didefinisikan di hard constrain ke-2.
-
-Violation dihitung dengan mencari kombinasi $(k, t, h)$ yang ditempati lebih dari satu gen di luar pengecualian co-teaching. Setiap kombinasi yang berisi lebih dari satu gen dihitung satu pelanggaran.
-
-Pada kombinasi hari $h$, waktu $t$, dan kelas $k$ yang sama, hanya diperbolehkan terdapat satu gen, kecuali jika mata pelajaran $m \in M_{\text{co}}$.
-
-$$v_3 = \bigl|\{(k,t,h) \mid \exists c_i, c_j \in C, i \neq j, k_i = k_j \wedge t_i = t_j \wedge h_i = h_j \wedge (m_i \notin M_{\text{co}} \vee m_j \notin M_{\text{co}})\}\bigr|$$
-
----
-
-### 4. Kendala Konflik Guru
+### 3. Kendala Konflik Guru
 
 Seorang guru tidak boleh mengajar di lebih dari satu kelas pada hari dan jam yang sama. Kendala ini hanya berlaku untuk kegiatan yang memiliki guru — kegiatan tanpa guru seperti Upacara, Bersih-bersih, dan Istirahat sudah ditangani oleh hard constrain ke-1 dan tidak dihitung di sini.
 
-Violation dihitung dengan mencari kombinasi $(g, t, h)$ yang muncul lebih dari satu kali dalam kromosom. Setiap kombinasi yang muncul lebih dari satu kali dihitung satu pelanggaran.
+Violation dihitung dengan mencari kombinasi $(g, t, h)$ yang muncul lebih dari satu kali dalam kromosom. Setiap kombinasi yang muncul lebih dari satu kali dihitung satu pelanggaran. Kendala ini hanya dievaluasi jika $g \neq \text{NULL}$.
 
-Seorang guru tidak boleh mengajar di lebih dari satu kelas pada kombinasi hari $h$ dan waktu $t$ yang sama. Kendala ini hanya dievaluasi jika $g \neq \text{NULL}$.
-
-$$v_4 = \bigl|\{(g,t,h) \mid g \neq \text{NULL} \wedge \exists\, c_i, c_j \in C,\ i \neq j,\ g_i = g_j \wedge t_i = t_j \wedge h_i = h_j\}\bigr|$$
+$$v_3 = \bigl|\{(g,t,h) \mid g \neq \text{NULL} \wedge \exists\, c_i, c_j \in C,\ i \neq j,\ g_i = g_j \wedge t_i = t_j \wedge h_i = h_j\}\bigr|$$
 
 ---
 
-### 5. Kendala Beban Mengajar (Teaching Load)
+### 4. Kendala Beban Mengajar (Teaching Load - Implicit)
 
-Setiap mata pelajaran pada setiap kelas memiliki jatah kemunculan per minggu. Jumlah kemunculan aktual dalam kromosom harus tepat sama dengan jatah tersebut, tidak lebih dan tidak kurang. Berlaku untuk semua mata pelajaran termasuk Upacara, Bersih-bersih, dan Istirahat.
-
-Violation dihitung dengan menjumlahkan selisih antara kemunculan aktual dan jatah $B(m,k)$ untuk setiap pasangan mata pelajaran dan kelas. Nilai absolut memastikan kelebihan maupun kekurangan sama-sama dihitung sebagai pelanggaran.
-
-Setiap mata pelajaran $m$ pada kelas $k$ memiliki jatah kemunculan $B(m,k)$ per minggu. Jumlah gen dengan pasangan $(m,k)$ dalam satu kromosom harus memenuhi $|\{ c \mid (m,k) \}| = B(m,k)$, dengan nilai tetap untuk mata pelajaran khusus:
-$$B(\text{Upacara},k) = 1, \quad B(\text{Bersih-bersih},k) = 1, \quad B(\text{Istirahat},k) = 9 \quad \forall\, k \in K$$
-
-$$v_5 = \sum_{m \in M} \sum_{k \in K} \left| \left|\{ c \in C \mid c.m = m \wedge c.k = k \}\right| - B(m,k) \right|$$
+Setiap mata pelajaran pada setiap kelas memiliki jatah kemunculan per minggu. Dalam program ini, kendala ini bersifat **implicit** dan dijamin selalu terpenuhi (violation = 0) karena kromosom dibuat secara presisi berdasarkan tabel `beban_mengajar` dan mutasi hanya mengubah waktu/hari, bukan mata pelajaran atau kelas.
 
 ---
 
@@ -118,43 +95,30 @@ $$+ \sum_{m \in M \setminus \{\text{NULL}\}}\sum_{k \in K}\sum_{h \in H} \max\!\
 
 ---
 
-### 2. Penyebaran Jam Mengajar Guru
-#### a. Batas Jam Mengajar Harian Guru
-
-Guru sebaiknya tidak mengajar terlalu banyak dalam satu hari meskipun secara total mingguan masih dalam batas wajar. Struktur slot sudah menjamin maksimal 4 slot berturut-turut secara alami karena Istirahat di jam ke-5 dan ke-8, sehingga tidak perlu constraint tambahan untuk slot berturut-turut.
-
-Violation dihitung per slot kelebihan di atas 7 pada hari yang sama. Setiap satu slot yang melebihi batas dihitung satu pelanggaran.
-
-Jumlah slot mengajar guru $g$ pada hari $h$ sebaiknya tidak melebihi 7 slot.
-
-$$v_{\text{sc2a}} = \sum_{g \in G \setminus \{\text{NULL}\}}\sum_{h \in H} \max\!\left(0,\ \bigl|\{ c \in C \mid c.g = g \wedge c.h = h \}\bigr| - 7\right)$$
-
----
-
-#### b. Minimum Jam Mengajar Mingguan Guru PNS/P3K
-
-Guru berstatus PNS atau P3K memiliki kewajiban mengajar minimal 24 jam per minggu sesuai ketentuan. Jika dari hasil penjadwalan jumlah slot yang tersedia memang tidak mencukupi 24, kendala ini boleh tidak terpenuhi dan kekurangannya digantikan dengan tugas di luar mengajar. Guru honorer tidak memiliki batas minimum ini. Penalti bersifat ringan, hanya sebagai sinyal untuk dicek manual.
-
-Violation dihitung per slot kekurangan di bawah 24 untuk setiap guru PNS atau P3K. Setiap satu slot yang kurang dari batas minimum dihitung satu pelanggaran.
-
-Didefinisikan terlebih dahulu himpunan guru PNS dan P3K:
-$$G_{\text{pns}} = \{ g \in G \mid \text{status}(g) \in \{\text{PNS},\ \text{P3K}\} \}$$
-
-Guru $g \in G_{\text{pns}}$ sebaiknya memiliki total slot mengajar minimal 24 dalam satu minggu.
-
-$$v_{\text{sc2b}} = \sum_{g \in G_{\text{pns}}} \max\!\left(0,\ 24 - \bigl|\{ c \in C \mid c.g = g \}\bigr|\right)$$
-
----
-
-### 3. Kendala Kontiguitas Harian (Blok Pertemuan Mapel)
+### 2. Kendala Kontiguitas Harian (Blok Pertemuan Mapel)
 
 Mata pelajaran yang sama jika dijadwalkan pada hari yang sama di satu kelas sebaiknya berada dalam satu blok waktu yang berurutan (kontigu/tandem). Mata pelajaran tersebut tidak boleh terpecah menjadi beberapa segmen yang disela oleh mata pelajaran lain pada hari itu. Slot Istirahat tidak dianggap sebagai penyela. Kendala ini tidak berlaku untuk kegiatan khusus (Upacara, Bersih-bersih, Istirahat) dan slot kosong (`NULL`).
 
-Violation dihitung berdasarkan jumlah segmen terpisah (blok) per mata pelajaran per hari yang melebihi batas wajar. Idealnya, sebuah mata pelajaran reguler yang diajarkan pada suatu hari tidak terputus oleh mata pelajaran lain, sehingga hanya membentuk tepat 1 blok. Pengurangan dengan angka 1 pada formula berfungsi sebagai batas toleransi kemunculan tersebut. Jika mata pelajaran terpecah menjadi dua blok yang terpisah, maka blok tambahan tersebut dihitung sebagai satu pelanggaran. Fungsi maksimum memastikan bahwa jika mata pelajaran tidak diajarkan sama sekali pada hari tersebut, nilai pelanggaran tetap nol tanpa menghasilkan penalti negatif.
+Violation dihitung berdasarkan jumlah segmen terpisah (blok) per mata pelajaran per hari yang melebihi batas wajar. Idealnya, sebuah mata pelajaran reguler yang diajarkan pada suatu hari tidak terputus oleh mata pelajaran lain, sehingga hanya membentuk tepat 1 blok. 
 
-Biarkan $E(m,k,h)$ menjadi jumlah blok waktu kontigu (segmen terpisah) untuk mata pelajaran $m$ di kelas $k$ pada hari $h$, dengan mengabaikan slot Istirahat di antara slot mata pelajaran yang sama.
+$$v_{\text{sc2}} = \sum_{m \notin \{\text{Upacara, Bersih-bersih, Istirahat, NULL}\}} \sum_{k \in K} \sum_{h \in H} \max\!\left(0,\ E(m,k,h) - 1\right)$$
 
-$$v_{\text{sc3}} = \sum_{m \notin \{\text{Upacara, Bersih-bersih, Istirahat, NULL}\}} \sum_{k \in K} \sum_{h \in H} \max\!\left(0,\ E(m,k,h) - 1\right)$$
+---
+
+### 3. Kendala Beban Kerja Guru
+
+Kendala ini menggabungkan dua aturan beban kerja guru untuk optimasi kinerja:
+
+#### a. Batas Jam Mengajar Harian Guru
+Guru sebaiknya tidak mengajar lebih dari 7 slot dalam satu hari.
+$$v_{\text{sc3a}} = \sum_{g \in G \setminus \{\text{NULL}\}}\sum_{h \in H} \max\!\left(0,\ \bigl|\{ c \in C \mid c.g = g \wedge c.h = h \}\bigr| - 7\right)$$
+
+#### b. Minimum Jam Mengajar Mingguan Guru PNS/P3K
+Guru PNS atau P3K memiliki kewajiban mengajar minimal 24 jam per minggu.
+$$v_{\text{sc3b}} = \sum_{g \in G_{\text{pns}}} \max\!\left(0,\ 24 - \bigl|\{ c \in C \mid c.g = g \}\bigr|\right)$$
+
+**Total Violation SC3:**
+$$v_{\text{sc3}} = v_{\text{sc3a}} + v_{\text{sc3b}}$$
 
 ---
 
