@@ -1,4 +1,5 @@
 import sqlite3
+import numpy as np
 from collections import defaultdict
 
 DB_PATH = "db/data.sqlite"
@@ -47,8 +48,17 @@ def get_special_ids():
     cursor = conn.cursor()
 
     # Special Mapels
-    cursor.execute("SELECT id, nama FROM mapel WHERE nama IN ('Upacara', 'Kamis Bersih-besih', 'Istirahat')")
-    special_mapels = {row['nama']: row['id'] for row in cursor.fetchall()}
+    # Gunakan LIKE atau pencarian yang lebih stabil untuk menghindari typo
+    cursor.execute("SELECT id, nama FROM mapel WHERE nama LIKE 'Upacara%' OR nama LIKE '%Bersih%' OR nama LIKE 'Istirahat%'")
+    special_mapels = {}
+    for row in cursor.fetchall():
+        nama = row['nama'].lower()
+        if 'upacara' in nama:
+            special_mapels['upacara'] = row['id']
+        elif 'bersih' in nama:
+            special_mapels['bersih'] = row['id']
+        elif 'istirahat' in nama:
+            special_mapels['istirahat'] = row['id']
 
     # Co-teaching mapels
     cursor.execute("SELECT id FROM mapel WHERE is_coteaching = 1")
@@ -60,9 +70,9 @@ def get_special_ids():
 
     conn.close()
     return {
-        'upacara': special_mapels.get('Upacara'),
-        'bersih': special_mapels.get('Kamis Bersih-besih'),
-        'istirahat': special_mapels.get('Istirahat'),
+        'upacara': special_mapels.get('upacara'),
+        'bersih': special_mapels.get('bersih'),
+        'istirahat': special_mapels.get('istirahat'),
         'co_teaching': co_teaching_ids,
         'pns_p3k': pns_p3k_ids
     }
@@ -83,9 +93,12 @@ def save_best_chromosome(chromosome, fitness_score, generation):
         )
         chromosome_id = cursor.lastrowid
 
-        # Insert semua gen
+        # Insert semua gen, urutkan agar rapi di database
         genes_data = []
-        for gene in chromosome:
+        # Sort by hari_id (index 4) and waktu_id (index 3)
+        sorted_chromosome = chromosome[np.lexsort((chromosome[:, 3], chromosome[:, 4]))]
+        
+        for gene in sorted_chromosome:
             # gene: [mapel_id, guru_id, kelas_id, waktu_id, hari_id]
             # Convert -1 back to NULL for guru_id
             g_id = int(gene[1]) if gene[1] != -1 else None

@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import argparse
 from database import get_beban_mengajar, get_mapel_guru_mapping, get_special_ids, save_best_chromosome
 from population import generate_population, WAKTU_IDS, HARI_IDS
 from fitness import calculate_fitness, MAPEL_IDX, GURU_IDX, KELAS_IDX, WAKTU_IDX, HARI_IDX
@@ -81,10 +82,18 @@ def mutate(chromosome, special_ids, mutation_rate=0.05):
                 class_mask[idx] = False # Don't compare with itself
                 occupied_slots = set(zip(chromosome[class_mask, HARI_IDX], chromosome[class_mask, WAKTU_IDX]))
                 
-                # Check if proposed slot is occupied
-                if (new_hari[i], new_waktu[i]) in occupied_slots:
-                    # Try to find an empty slot (Max 10 attempts)
-                    for _ in range(10):
+                # Check if proposed slot is occupied or is a fixed slot
+                is_fixed_manual = (
+                    (new_hari[i] == 1 and new_waktu[i] == 1) or
+                    (new_hari[i] == 4 and new_waktu[i] == 1) or
+                    (new_waktu[i] == 5) or
+                    (new_waktu[i] == 8 and new_hari[i] != 5) or
+                    (new_hari[i] == 5 and new_waktu[i] >= 7)
+                )
+                
+                if (new_hari[i], new_waktu[i]) in occupied_slots or is_fixed_manual:
+                    # Try to find an empty slot (Increased attempts to 50)
+                    for _ in range(50):
                         h = random.choice(HARI_IDS)
                         w = random.choice(WAKTU_IDS)
                         # Avoid fixed slots
@@ -151,5 +160,12 @@ def run_ga(pop_size=100, generations=1000):
     return best_overall_chromosome, best_overall_fitness
 
 if __name__ == "__main__":
-    best_schedule, score = run_ga(pop_size=200, generations=2000)
+    parser = argparse.ArgumentParser(description='Run Genetic Algorithm for School Scheduling')
+    parser.add_argument('--generations', '-gen', type=int, default=2000, help='Number of generations (default: 2000)')
+    parser.add_argument('--population', '-pop', type=int, default=200, help='Population size (default: 200)')
+    
+    args = parser.parse_args()
+
+    print(f"Running GA with pop_size={args.population}, generations={args.generations}")
+    best_schedule, score = run_ga(pop_size=args.population, generations=args.generations)
     print(f"Final Best Fitness: {format_fitness_scientific(score)}")

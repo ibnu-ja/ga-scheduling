@@ -86,11 +86,14 @@ def calculate_fitness(chromosome, special_ids=None):
         
         if has_non_co:
             # Violation if there's a non-co-teaching mapel and count > 1
-            hc3_v += 1
+            # RENCANA PERUBAHAN: Gunakan (counts - 1) untuk penalti lebih berat
+            hc3_v += (kth_counts[slot_idx] - 1)
         else:
             # ALL are co-teaching. Check if they have same mapel_id.
-            if len(np.unique(slot_mapels)) > 1:
-                hc3_v += 1
+            unique_mapels = np.unique(slot_mapels)
+            if len(unique_mapels) > 1:
+                # Different co-teaching mapels in same slot
+                hc3_v += (kth_counts[slot_idx] - 1)
     
     p_total += hc3_v * W_HARD
 
